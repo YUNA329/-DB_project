@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coach Management</title>
+  <style>
+      body {
+          font-family: Arial, sans-serif;
+          text-align: center;
+          background-color: #f7f9fc;
+          padding: 20px;
+      }
+      table {
+          margin: 20px auto;
+          border-collapse: collapse;
+          width: 80%;
+          background: white;
+      }
+      th, td {
+          border: 1px solid #ddd;
+          padding: 8px;
+          text-align: center;
+      }
+      th {
+          background-color: #1e88e5;
+          color: white;
+      }
+      button {
+          padding: 10px 20px;
+          margin: 10px;
+          background-color: #1e88e5;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+      }
+      button:hover {
+          background-color: #1565c0;
+      }
+      form {
+          margin: 20px 0;
+      }
+      input, select {
+          margin: 5px;
+          padding: 8px;
+          border: 1px solid #ddd;
+          border-radius: 5px;
+      }
+  </style>
+</head>
+<body>
+<h1>코치 관리</h1>
+
+<!-- 코치 등록 폼 -->
+<form id="coachForm">
+  <input type="hidden" id="coachId" name="coachId">
+  <input type="text" id="name" name="name" placeholder="이름" required>
+  <input type="number" id="experienceYears" name="experienceYears" placeholder="경력 (년)" required>
+  <select id="departmentId" name="departmentId" required>
+    <option value="2">타격</option>
+    <option value="3">수비</option>
+    <option value="4">주루</option>
+    <option value="5">감독</option>
+  </select>
+  <button type="button" onclick="saveCoach()">등록/수정</button>
+</form>
+
+<!-- 코치 목록 표시 -->
+<button onclick="fetchCoaches()">코치 목록 불러오기</button>
+<table id="coachesTable">
+  <thead>
+  <tr>
+    <th>이름</th>
+    <th>경력 (년)</th>
+    <th>부서</th>
+    <th>작업</th>
+  </tr>
+  </thead>
+  <tbody>
+  <!-- 코치 데이터가 여기에 동적으로 추가됩니다 -->
+  </tbody>
+</table>
+
+<script>
+    // 코치 목록 조회
+    async function fetchCoaches() {
+        const tableBody = document.querySelector("#coachesTable tbody");
+        tableBody.innerHTML = "<tr><td colspan='4'>Loading...</td></tr>";
+
+        try {
+            const response = await fetch('/api/coaches');
+            if (!response.ok) throw new Error(`Failed to fetch coaches: ${response.status}`);
+            const coaches = await response.json();
+
+            if (coaches.length === 0) {
+                tableBody.innerHTML = "<tr><td colspan='4'>등록된 코치가 없습니다.</td></tr>";
+                return;
+            }
+
+            tableBody.innerHTML = coaches.map(coach => `
+          <tr>
+            <td>${coach.name}</td>
+            <td>${coach.experienceYears}</td>
+            <td>${coach.department.departmentName} (${coach.department.function})</td>
+            <td>
+              <button onclick="editCoach(${coach.coachId}, '${coach.name}', ${coach.experienceYears}, ${coach.department.departmentId})">수정</button>
+              <button onclick="deleteCoach(${coach.coachId})">삭제</button>
+            </td>
+          </tr>
+        `).join('');
+        } catch (error) {
+            tableBody.innerHTML = `<tr><td colspan='4'>Error: ${error.message}</td></tr>`;
+        }
+    }
+
+    // 코치 등록/수정
+    async function saveCoach() {
+        const form = document.getElementById("coachForm");
+        const coachId = document.getElementById("coachId").value;
+        const name = document.getElementById("name").value;
+        const experienceYears = document.getElementById("experienceYears").value;
+        const departmentId = document.getElementById("departmentId").value;
+
+        const coachData = {
+            name,
+            experienceYears: parseInt(experienceYears),
+            departmentId: parseInt(departmentId)
+        };
+
+        const method = coachId ? "PUT" : "POST";
+        const url = coachId ? `/api/coaches/${coachId}` : "/api/coaches";
+
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(coachData),
+            });
+            if (!response.ok) throw new Error(`Failed to save coach: ${response.status}`);
+            alert(coachId ? "코치 수정 완료!" : "코치 등록 완료!");
+            form.reset();
+            fetchCoaches();
+        } catch (error) {
+            alert(`Error: ${error.message}`);
+        }
+    }
+
+    // 코치 수정 모드
+    function editCoach(id, name, experienceYears, departmentId) {
+        document.getElementById("coachId").value = id;
+        document.getElementById("name").value = name;
+        document.getElementById("experienceYears").value = experienceYears;
+        document.getElementById("departmentId").value = departmentId;
+    }
+
+    // 코치 삭제
+    async function deleteCoach(coachId) {
+        if (!confirm("정말 삭제하시겠습니까?")) return;
+
+        try {
+            const response = await fetch(`/api/coaches/${coachId}`, { method: "DELETE" });
+            if (!response.ok) throw new Error(`Failed to delete coach: ${response.status}`);
+            alert("코치 삭제 완료!");
+            fetchCoaches();
+        } catch (error) {
+            alert(`Error: ${error.message}`);
+        }
+    }
+</script>
+</body>
+</html>

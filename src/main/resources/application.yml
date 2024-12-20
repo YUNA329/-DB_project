@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    url: jdbc:h2:tcp://localhost/~/baseball
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+  h2:
+    console:
+      enabled: true  # H2 ?? ???
+      path: /h2-console
+
+  thymeleaf:
+    enabled: true
+
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+    org.hibernate.orm.jdbc.bind: trace

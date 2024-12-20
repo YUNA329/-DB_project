@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Player Management</title>
+  <style>
+      body {
+          font-family: Arial, sans-serif;
+          text-align: center;
+          background-color: #f7f9fc;
+          padding: 20px;
+      }
+      table {
+          margin: 20px auto;
+          border-collapse: collapse;
+          width: 80%;
+          background: white;
+      }
+      th, td {
+          border: 1px solid #ddd;
+          padding: 8px;
+          text-align: center;
+      }
+      th {
+          background-color: #1e88e5;
+          color: white;
+      }
+      button {
+          padding: 10px 20px;
+          margin: 10px;
+          background-color: #1e88e5;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+      }
+      button:hover {
+          background-color: #1565c0;
+      }
+      form {
+          margin: 20px 0;
+      }
+      input, select {
+          margin: 5px;
+          padding: 8px;
+          border: 1px solid #ddd;
+          border-radius: 5px;
+      }
+  </style>
+</head>
+<body>
+<h1>선수 관리</h1>
+
+<!-- 선수 등록 폼 -->
+<form id="playerForm">
+  <input type="hidden" id="playerId" name="playerId">
+  <input type="text" id="name" name="name" placeholder="이름" required>
+  <input type="text" id="position" name="position" placeholder="포지션" required>
+  <input type="date" id="birthDate" name="birthDate" required>
+  <select id="gradeId" name="gradeId" required>
+    <option value="1">A</option>
+    <option value="2">B</option>
+    <option value="3">C</option>
+  </select>
+  <select id="departmentId" name="departmentId" required>
+    <option value="1">선수(선수)</option>
+  </select>
+  <button type="button" onclick="savePlayer()">등록/수정</button>
+</form>
+
+<!-- 선수 목록 표시 -->
+<button onclick="fetchPlayers()">선수 목록 불러오기</button>
+<table id="playersTable">
+  <thead>
+  <tr>
+    <th>이름</th>
+    <th>포지션</th>
+    <th>생년월일</th>
+    <th>등급</th>
+    <th>부서</th>
+    <th>작업</th>
+  </tr>
+  </thead>
+  <tbody>
+  <!-- 선수 데이터가 여기에 동적으로 추가됩니다 -->
+  </tbody>
+</table>
+
+<script>
+    // 선수 목록 조회
+    async function fetchPlayers() {
+        const tableBody = document.querySelector("#playersTable tbody");
+        tableBody.innerHTML = "<tr><td colspan='6'>Loading...</td></tr>";
+
+        try {
+            const response = await fetch('/api/players');
+            if (!response.ok) throw new Error(`Failed to fetch players: ${response.status}`);
+            const players = await response.json();
+
+            if (players.length === 0) {
+                tableBody.innerHTML = "<tr><td colspan='6'>등록된 선수가 없습니다.</td></tr>";
+                return;
+            }
+
+            tableBody.innerHTML = players.map(player => `
+          <tr>
+            <td>${player.name}</td>
+            <td>${player.position}</td>
+            <td>${player.birthDate}</td>
+            <td>${player.grade.gradeName}</td>
+            <td>${player.department.departmentName} (${player.department.function})</td>
+            <td>
+              <button onclick="editPlayer(${player.playerId}, '${player.name}', '${player.position}', '${player.birthDate}', ${player.grade.gradeId}, ${player.department.departmentId})">수정</button>
+              <button onclick="deletePlayer(${player.playerId})">삭제</button>
+            </td>
+          </tr>
+        `).join('');
+        } catch (error) {
+            tableBody.innerHTML = `<tr><td colspan='6'>Error: ${error.message}</td></tr>`;
+        }
+    }
+
+    // 선수 등록/수정
+    async function savePlayer() {
+        const form = document.getElementById("playerForm");
+        const playerId = document.getElementById("playerId").value;
+        const name = document.getElementById("name").value;
+        const position = document.getElementById("position").value;
+        const birthDate = document.getElementById("birthDate").value;
+        const gradeId = document.getElementById("gradeId").value;
+        const departmentId = document.getElementById("departmentId").value;
+
+        const playerData = {
+            name,
+            position,
+            birthDate,
+            gradeId: parseInt(gradeId),
+            departmentId: parseInt(departmentId)
+        };
+
+        const method = playerId ? "PUT" : "POST";
+        const url = playerId ? `/api/players/${playerId}` : "/api/players";
+
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(playerData),
+            });
+            if (!response.ok) throw new Error(`Failed to save player: ${response.status}`);
+            alert(playerId ? "선수 수정 완료!" : "선수 등록 완료!");
+            form.reset();
+            fetchPlayers();
+        } catch (error) {
+            alert(`Error: ${error.message}`);
+        }
+    }
+
+    // 선수 수정 모드
+    function editPlayer(id, name, position, birthDate, gradeId, departmentId) {
+        document.getElementById("playerId").value = id;
+        document.getElementById("name").value = name;
+        document.getElementById("position").value = position;
+        document.getElementById("birthDate").value = birthDate;
+        document.getElementById("gradeId").value = gradeId;
+        document.getElementById("departmentId").value = departmentId;
+    }
+
+    // 선수 삭제
+    async function deletePlayer(playerId) {
+        if (!confirm("정말 삭제하시겠습니까?")) return;
+
+        try {
+            const response = await fetch(`/api/players/${playerId}`, { method: "DELETE" });
+            if (!response.ok) throw new Error(`Failed to delete player: ${response.status}`);
+            alert("선수 삭제 완료!");
+            fetchPlayers();
+        } catch (error) {
+            alert(`Error: ${error.message}`);
+        }
+    }
+</script>
+</body>
+</html>
